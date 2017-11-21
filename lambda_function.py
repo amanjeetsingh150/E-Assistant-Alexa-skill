@@ -187,6 +187,7 @@ def continue_list(intent,session):
     global name_list
     if(flag2==1):
         global subs
+        print(name_list[0])
         result=firebase.patch('/lists/cse one/0',{'name': name_list[0], subs: str(marks)})
         name_list.pop(0)
         speech_output="Marks inserted. Tell me marks of "+name_list[0]+" in "+subs+" ."
@@ -195,12 +196,18 @@ def continue_list(intent,session):
         flag2=0
         global top_name
         top_name=name_list[0]
-    elif(len(name_list)>1):
+    elif(len(name_list)>1 and flag2==0):
+        print(top_name)
         index_list=copy_name_list.index(top_name)
+        global name_list
         print(index_list)
         result=firebase.patch('/lists/cse one/'+str(index_list),{'name': name_list[0], subs: str(marks)})
         global name_list
         name_list.pop(0)
+        global top_name
+        top_name=name_list[0]
+        global flag2
+        flag2=0
         speech_output="Marks inserted. Tell me marks of "+name_list[0]+" in "+subs+" ."
         should_end_session=False
     else:
@@ -215,10 +222,7 @@ def make_list(intent,session):
     session_attributes={}
     should_end_session=False
     speech_output=""
-    class_name=intent['slots']['class']['value']
-    class_name=class_name.lower()
     list_name=intent['slots']['list']['value']
-    print(class_name)
     global subs
     subs=list_name
     students_data=firebase.get('/lists/cse one',None)
