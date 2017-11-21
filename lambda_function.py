@@ -16,6 +16,7 @@ name_list=[]
 flag=0
 index=0
 flag2=0
+flag3=0
 days=['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
 
 def build_speechlet_response(title,output,reprompt_text,should_end_session):
@@ -175,6 +176,18 @@ def schedule_teacher(intent,session):
                 should_end_session=True
         return build_response(session_attributes, build_speechlet_response(
                card_title, speech_output, speech_output, should_end_session))
+               
+def announcement_feature(intent,session):
+    card_title="Announcement Feature"
+    session_attributes={}
+    should_end_session=False
+    speech_output=""
+    announce_list=firebase.get('/announce',None)
+    for i in range(len(announce_list)):
+        speech_output+='Announcement '+str(i+1)+' : '+announce_list[i]['annText']+' by '+announce_list[i]['name']+' at '+announce_list[i]['time']+' .'+' '
+    should_end_session=True    
+    return build_response(session_attributes, build_speechlet_response(
+           card_title, speech_output, speech_output, should_end_session))
 
 def continue_list(intent,session):
     card_title="Continue List"
@@ -196,7 +209,7 @@ def continue_list(intent,session):
         flag2=0
         global top_name
         top_name=name_list[0]
-    elif(len(name_list)>1 and flag2==0):
+    elif(len(name_list)>=1 and flag2==0):
         print(top_name)
         index_list=copy_name_list.index(top_name)
         global name_list
@@ -204,15 +217,18 @@ def continue_list(intent,session):
         result=firebase.patch('/lists/cse one/'+str(index_list),{'name': name_list[0], subs: str(marks)})
         global name_list
         name_list.pop(0)
-        global top_name
-        top_name=name_list[0]
-        global flag2
-        flag2=0
-        speech_output="Marks inserted. Tell me marks of "+name_list[0]+" in "+subs+" ."
-        should_end_session=False
-    else:
-        speech_output="All records have been updated."
-        should_end_session=True
+        if(len(name_list)==0):
+            global flag3
+            flag3=2
+            speech_output="All records have been updated."
+            should_end_session=True
+        else:
+            global top_name
+            top_name=name_list[0]
+            global flag2
+            flag2=0
+            speech_output="Marks inserted. Tell me marks of "+name_list[0]+" in "+subs+" ."
+            should_end_session=False
     return build_response(session_attributes, build_speechlet_response(
                card_title, speech_output, speech_output, should_end_session))    
         
@@ -258,6 +274,8 @@ def on_intent(intent_request, session):
             return make_list(intent,session)
         if intent_name=="ContinueList":
             return continue_list(intent,session)
+        if intent_name=="AnnouncementIntent":
+            return announcement_feature(intent,session)
         elif intent_name=="AMAZON.HelpIntent":
                 return get_help(intent,session)
         elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
@@ -312,10 +330,9 @@ def on_launch(launch_request, session):
 
 def get_welcome_response():
         card_title="Welcome to Teacher Helper"
-        should_end_session=False
+        should_end_session=True
         session_attributes={}
-        speech_output="Welcome to Teacher Helper."\
-                       "You can ask me to take attendance of class."
+        speech_output="Welcome to Teacher Helper . You can manage announcements, schedules, announcements and lists with this skill ."
         reprompt_text=speech_output
         return build_response(session_attributes, build_speechlet_response(
         card_title, speech_output, reprompt_text, should_end_session))
