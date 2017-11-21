@@ -8,10 +8,14 @@ from datetime import datetime
 	
 firebase=firebase.FirebaseApplication('https://calci-b1a59.firebaseio.com',None)
 first_student=""
+top_name=""
 students_list=[]
+copy_students_list=[]
 final_list=[]
+name_list=[]
 flag=0
 index=0
+flag2=0
 days=['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
 
 def build_speechlet_response(title,output,reprompt_text,should_end_session):
@@ -50,6 +54,7 @@ def get_help(intent,session):
                         
 def continue_attendance(intent,session):
         card_title="Continue Attendance"
+        print(card_title)
         session_attributes={}
         should_end_session=False
         speech_output=""
@@ -166,21 +171,66 @@ def schedule_teacher(intent,session):
                         should_end_session=True
                         break
             elif(m==len(hours)-1):
-                speech_output="No class"+" "+str(current_time)+' .'
+                speech_output="No class scheduled ."
                 should_end_session=True
         return build_response(session_attributes, build_speechlet_response(
                card_title, speech_output, speech_output, should_end_session))
 
+def continue_list(intent,session):
+    card_title="Continue List"
+    print(card_title)
+    session_attributes={}
+    should_end_session=False
+    speech_output=""
+    marks=intent['slots']['marks']['value']
+    print(marks)
+    global name_list
+    if(flag2==1):
+        global subs
+        result=firebase.patch('/lists/cse one/0',{'name': name_list[0], subs: str(marks)})
+        name_list.pop(0)
+        speech_output="Marks inserted. Tell me marks of "+name_list[0]+" in "+subs+" ."
+        should_end_session=False
+        global flag2
+        flag2=0
+        global top_name
+        top_name=name_list[0]
+    elif(len(name_list)>1):
+        index_list=copy_name_list.index(top_name)
+        print(index_list)
+        result=firebase.patch('/lists/cse one/'+str(index_list),{'name': name_list[0], subs: str(marks)})
+        global name_list
+        name_list.pop(0)
+        speech_output="Marks inserted. Tell me marks of "+name_list[0]+" in "+subs+" ."
+        should_end_session=False
+    else:
+        speech_output="All records have been updated."
+        should_end_session=True
+    return build_response(session_attributes, build_speechlet_response(
+               card_title, speech_output, speech_output, should_end_session))    
+        
+        
 def make_list(intent,session):
     card_title="Make List"
     session_attributes={}
-    should_end_session=True
+    should_end_session=False
     speech_output=""
     class_name=intent['slots']['class']['value']
     class_name=class_name.lower()
     list_name=intent['slots']['list']['value']
-    students=firebase.get('/lists/'+class_name,None)
-    speech_output=list_name+' value for '+students[0]['name']+'is .'
+    print(class_name)
+    global subs
+    subs=list_name
+    students_data=firebase.get('/lists/cse one',None)
+    print(students_data)
+    speech_output='Tell me marks for '+list_name+' of '+students_data[0]['name']+' .'
+    global flag2
+    flag2=1
+    global name_list
+    for x in students_data:
+        name_list.append(x['name'])
+    global copy_name_list    
+    copy_name_list=copy.copy(name_list)    
     return build_response(session_attributes, build_speechlet_response(
                card_title, speech_output, speech_output, should_end_session))
     
@@ -202,6 +252,8 @@ def on_intent(intent_request, session):
             return schedule_teacher(intent,session)
         if intent_name=="MakeListIntent":
             return make_list(intent,session)
+        if intent_name=="ContinueList":
+            return continue_list(intent,session)
         elif intent_name=="AMAZON.HelpIntent":
                 return get_help(intent,session)
         elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
@@ -223,7 +275,6 @@ def start_attendance(intent,session):
         first_student=student
         global final_list
         final_list=copy.copy(result)
-        print("Hello")
         print(final_list)
         speech_output="I am starting attendance. "+student
         print(speech_output)
